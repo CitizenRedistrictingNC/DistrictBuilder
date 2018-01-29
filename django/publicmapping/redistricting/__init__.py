@@ -169,10 +169,8 @@ class StoredConfig:
 
             # Consolidated web-readable temp directory
             webtmp = cfg.get('temp')
-            if not webtmp:
-                webtmp = '%s/../local/reports/' % root_dir
-
-            output.write("\nWEB_TEMP = '%s'\n" % webtmp)
+            if webtmp:
+                output.write("\nWEB_TEMP = '%s'\n" % webtmp)
 
             # Reporting is optional
             cfg = self.data.xpath('//Reporting')
