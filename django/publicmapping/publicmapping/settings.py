@@ -243,3 +243,10 @@ LEADERBOARD_MAX_RANKED = 10
 SITE_ID = 2
 
 REPORTS_ENABLED = 'CALC'
+
+# NOTE: Leave this at the end of the file!
+# These settings are generated based on config.xml
+# and allow for modifiying/overriding the default settings
+from publicmapping.common_settings import *
+from publicmapping.reporting_settings import *
+from publicmapping.publicmapping_settings import *
