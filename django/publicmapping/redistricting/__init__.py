@@ -125,39 +125,27 @@ class StoredConfig:
 
         return True
 
-    def merge_settings(self, settings):
-        """
-        Take the default settings from the input file, and write a django settings file.
-        The django settings file receives database connection settings, etc from the
-        DistrictBuilder configuration file.
 
-        @param settings: The name of the settings file that should be merged. Currently
-            supported settings are "settings.py" and "reporting_settings.py"
+    def write_settings(self):
+        """
+        Write new settings files based off of the configuration provided, which
+        will then be imported by the main settings file.
+
         @returns: A flag indicating if the merge was successful.
         """
-        settings_in = open(settings + '.in', 'r')
-        settings_out = open(settings, 'w')
+        with open('publicmapping/common_settings.py', 'w') as common_settings_file:
+            common_settings_result = self._write_common_settings(common_settings_file)
 
-        # Copy input settings for district builder
-        for line in settings_in.readlines():
-            settings_out.write(line)
+        with open('publicmapping/publicmapping_settings.py', 'w') as publicmapping_settings_file:
+            publicmapping_settings_result = self._write_publicmapping_settings(publicmapping_settings_file)
 
-        settings_in.close()
+        with open('publicmapping/reporting_settings.py', 'w') as reporting_settings_file:
+            reporting_settings_result = self._write_reporting_settings(reporting_settings_file)
 
-        if settings == 'settings.py' or settings == 'reporting_settings.py':
-            if not self._merge_common_settings(settings_out):
-                return False
+        return common_settings_result and publicmapping_settings_result and reporting_settings_result
 
-            if settings == 'settings.py':
-                return self._merge_publicmapping_settings(settings_out)
-            else:
-                return self._merge_report_settings(settings_out)
-        else:
-            logging.warning('The settings file was not recognized.')
 
-            return False
-
-    def _merge_common_settings(self, output):
+    def _write_common_settings(self, output):
         """
         Write common configuration settings to the output file.
 
@@ -214,7 +202,7 @@ class StoredConfig:
 
             return False
 
-    def _merge_publicmapping_settings(self, output):
+    def _write_publicmapping_settings(self, output):
         """
         Write settings specific to the publicmapping django app to
         a settings file.
@@ -403,8 +391,6 @@ class StoredConfig:
                 maxranked = cfg.get('maxranked') or 10
             output.write("\nLEADERBOARD_MAX_RANKED = %d\n" % int(maxranked))
 
-            output.close()
-
             return True
 
         except Exception, ex:
@@ -413,7 +399,7 @@ class StoredConfig:
 
             return False
 
-    def _merge_report_settings(self, output):
+    def _write_reporting_settings(self, output):
         """
         Write settings specific to the reporting django app to
         a settings file.
@@ -431,10 +417,6 @@ class StoredConfig:
                     cfg = bardcfg
 
                     output.write("BARD_BASESHAPE = '%s'\n" % cfg.get('shape'))
-
-            output.close()
-
-            os.rename(output.name, './reporting/settings.py')
 
             return (
                 True,
