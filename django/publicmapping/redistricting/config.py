@@ -62,6 +62,8 @@ from redistricting.models import (
     get_featuretype_name,
 )
 
+import requests
+
 logger = logging.getLogger(__name__)
 
 
@@ -605,6 +607,7 @@ class ConfigImporter:
                             node[0], body, subject, obj)
 
                 parentless = self.store.get_top_regional_geolevel(region)
+
                 if parentless is not None:
                     add_legislative_level_for_geolevel(
                         parentless, legislative_body, subject, None)
@@ -1185,6 +1188,24 @@ class SpatialUtils:
 
         @returns: A flag indicating if geoserver was configured correctly.
         """
+
+        # Set the Geoserver proxy base url
+        # This is necessary for geoserver to know where to look for its internal
+        # resources like its copy of openlayers and other things
+
+        settings = requests.get(
+            'http://geoserver.internal.districtbuilder.com:8080/geoserver/rest/settings.json'
+        ).json()
+
+        settings['global']['proxyBaseUrl'] = 'http://localhost:8080/geoserver'
+
+        resp = requests.put(
+            'http://geoserver.internal.districtbuilder.com:8080/geoserver/rest/settings',
+            json=settings,
+            headers=self.headers['default']
+        )
+        resp.raise_for_status()
+
 
         # Create our namespace
         namespace_url = '/geoserver/rest/namespaces'
