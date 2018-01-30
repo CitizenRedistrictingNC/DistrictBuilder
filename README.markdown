@@ -32,14 +32,6 @@ and `config.xml`. Below is an explanation of what each of these flags does:
 
 To compile language files, use the `-l` flag.
 
-##### Static Files #####
-
-To collect static files, use the `-s` flag.
-
-##### Database Views #####
-
-The `-V` flag creates some kind of database views. It doesn't currently work though.
-
 ##### Data Setup #####
 
 The following flags are all executed as part of `scripts/load_development_data`.
@@ -72,6 +64,12 @@ accumulating record information along the way.
 The `-t` flag creates some example plans in the database to use as baselines for creating user
 plans. If it can't find information it needs to create a template, it skips that template after
 printing a warning message and doesn't fail.
+
+###### Database Views ######
+
+The `-V` flag creates the database views necessary for geoserver to show tiles. It's run as part
+of `load_development_data`.
+
 
 ###### `-G`: Configure Geoserver ######
 
