@@ -1265,7 +1265,13 @@ class SpatialUtils:
             'binding': SpatialUtils.get_binding(field)
         } for field in geolevel_fields]
 
-        subject_attrs = [{'name': 'name', 'binding': 'java.lang.String'}]
+        subject_attrs = [
+            {'name': 'name', 'binding': 'java.lang.String'},
+            {'name': 'geom', 'binding': 'java.lang.String'},
+            {'name': 'geolevel_id', 'binding': 'com.vividsolutions.jts.geom.MultiPolygon'},
+            {'name': 'number', 'binding': 'java.lang.Double'},
+            {'name': 'percentage', 'binding': 'java.lang.Double'},
+        ]
 
         if self.create_featuretype(
                 'identify_geounit', attributes=geolevel_attrs):
@@ -1624,22 +1630,6 @@ class SpatialUtils:
                 'dataLinks': [],
                 'nativeCRS': 'EPSG:3785',
                 'srs': 'EPSG:3785',
-                # Set the bounding box to the maximum spherical mercator extent
-                # in order to avoid all issues with geowebcache tile offsets
-                'nativeBoundingBox': {
-                    'minx': '%0.1f' % -8974318.61690597,
-                    'miny': '%0.1f' % 4813698.29328726,
-                    'maxx': '%0.1f' % -8312679.70006949,
-                    'maxy': '%0.1f' % 5244191.63658937,
-                    'crs': 'EPSG:3785'
-                },
-                'latLonBoundingBox': {
-                    'minx': -80.61767578124999,
-                    'miny': 39.639537564366684,
-                    'maxx': -74.674072265625,
-                    'maxy': 42.5530802889558,
-                    'crs': 'EPSG:4326'
-                },
                 'maxFeatures': settings.FEATURE_LIMIT + 1,
                 'attributes': {
                     'attribute': attributes
