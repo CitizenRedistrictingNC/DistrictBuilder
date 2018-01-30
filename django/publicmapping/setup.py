@@ -96,4 +96,3 @@ def setup_logging(verbosity):
 
 if __name__ == "__main__":
     main()
-

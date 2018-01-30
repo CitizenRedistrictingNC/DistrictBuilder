@@ -8,6 +8,10 @@ https://docs.djangoproject.com/en/1.11/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
+
+NOTE: This settings file should not be changed!
+      To configure the application, please see:
+      django/publicmapping/config/config.xml
 """
 
 import os
@@ -86,17 +90,6 @@ WSGI_APPLICATION = 'publicmapping.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'district_builder',
-        'USER': 'district_builder',
-        'PASSWORD': 'district_builder',
-        'HOST': 'postgres.internal.districtbuilder.com',
-        'PORT': '5432'
-    }
-}
-
 # Caches
 CACHES = {
     'default': {
@@ -160,14 +153,6 @@ logging.config.dictConfig({
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
-
-# TODO: these languages are defined in config.xml and these
-# settings will need to become dynamic
-LANGUAGE_CODE = 'en'
-LANGUAGES = (
-    ('en', 'English'),
-    ('es', 'Spanish'),
-)
 
 LOCALE_PATHS = [
     'locale',
@@ -247,6 +232,4 @@ REPORTS_ENABLED = 'CALC'
 # NOTE: Leave this at the end of the file!
 # These settings are generated based on config.xml
 # and allow for modifiying/overriding the default settings
-from publicmapping.common_settings import *
-from publicmapping.reporting_settings import *
-from publicmapping.publicmapping_settings import *
+from publicmapping.config_settings import *

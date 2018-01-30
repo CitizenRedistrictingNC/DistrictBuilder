@@ -25,6 +25,7 @@ Author:
 
 import os, traceback, random, logging
 from lxml.etree import parse, clear_error_log, XMLSchema, XMLSyntaxError, XMLSchemaParseError
+from jinja2 import Environment, FileSystemLoader
 
 
 class StoredConfig:
@@ -126,305 +127,67 @@ class StoredConfig:
         return True
 
 
+    def generate_secret_key(self):
+        return "".join([
+            random.choice(
+                "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
+            for i in range(50)
+        ])
+
+
     def write_settings(self):
         """
-        Write new settings files based off of the configuration provided, which
+        Write new settings file based off of the configuration provided, which
         will then be imported by the main settings file.
 
         @returns: A flag indicating if the merge was successful.
         """
-        with open('publicmapping/common_settings.py', 'w') as common_settings_file:
-            common_settings_result = self._write_common_settings(common_settings_file)
+        j2_env = Environment(loader=FileSystemLoader('publicmapping'),
+                             trim_blocks=True)
 
-        with open('publicmapping/publicmapping_settings.py', 'w') as publicmapping_settings_file:
-            publicmapping_settings_result = self._write_publicmapping_settings(publicmapping_settings_file)
+        with open('publicmapping/config_settings.py', 'w') as config_settings, \
+             open('publicmapping/.env', 'w') as dot_env:
+            try:
+                # TODO: Move settings templates into config/templates
+                database = self.data.xpath('//Project/Database')[0]
+                config_settings.write(
+                    j2_env.get_template('config_settings.py.j2').render(
+                        admin=self.data.xpath('//Admin')[0],
+                        i18n=self.data.xpath('//Internationalization')[0],
+                        database=database,
+                        map_server=self.data.xpath('//MapServer')[0],
+                        key_value_store=self.data.xpath('//Project/KeyValueStore'),
+                        adjacencies=self.data.xpath('//Adjacencies/*'),
+                        convex=self.data.xpath(
+                            '//Scoring/ScoreFunctions/ScoreFunction[@id="district_convex"]'
+                        ),
+                        mailer=self.data.xpath('//Mailer')[0],
+                        project=self.data.xpath('//Project')[0],
+                        reporting=self.data.xpath('//Reporting'),
+                        google_analytics=self.data.xpath('//GoogleAnalytics'),
+                        upload=self.data.xpath('//Upload'),
+                        fix_unassigned=self.data.xpath('//FixUnassigned'),
+                        max_undos=self.data.xpath('//MaxUndos'),
+                        leaderboard=self.data.xpath('//Leaderboard'),
+                    )
+                )
+                dot_env.write(
+                    j2_env.get_template('env.j2').render(
+                        DJANGO_SECRET_KEY=self.generate_secret_key(),
+                        POSTGRES_DB=database.get('name'),
+                        POSTGRES_USER=database.get('user'),
+                        POSTGRES_PASSWORD=databsae.get('password'),
+                    )
+                )
 
-        with open('publicmapping/reporting_settings.py', 'w') as reporting_settings_file:
-            reporting_settings_result = self._write_reporting_settings(reporting_settings_file)
+                return True
 
-        return common_settings_result and publicmapping_settings_result and reporting_settings_result
+            except Exception as ex:
+                # An error occurred during the processing of the settings file
+                logging.warning(traceback.format_exc())
 
+                return False
 
-    def _write_common_settings(self, output):
-        """
-        Write common configuration settings to the output file.
-
-        @param output: A file like object.
-        @returns: A boolean flag indicating if writing settings succeeded.
-        """
-        try:
-            cfg = self.data.xpath('//Admin')[0]
-            output.write("\nADMINS = (\n  ('%s',\n  '%s'),\n)" %
-                         (cfg.get('user'), cfg.get('email')))
-            output.write("\nMANAGERS = ADMINS\n")
-
-            output.write("\nSECRET_KEY = '%s'\n" % "".join([
-                random.choice(
-                    "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
-                for i in range(50)
-            ]))
-
-            cfg = self.data.xpath('//Project')[0]
-            root_dir = cfg.get('root')
-
-            # Consolidated web-readable temp directory
-            webtmp = cfg.get('temp')
-            if webtmp:
-                output.write("\nWEB_TEMP = '%s'\n" % webtmp)
-
-            # Reporting is optional
-            cfg = self.data.xpath('//Reporting')
-            if cfg is not None:
-                bardcfg = cfg[0].find('BardConfigs/BardConfig')
-                calccfg = cfg[0].find('CalculatorReports')
-
-                # BARD
-                if bardcfg is not None:
-                    cfg = bardcfg
-                    output.write("\nREPORTS_ENABLED = 'BARD'\n")
-
-                # Calculator reports
-                elif calccfg is not None:
-                    output.write("\nREPORTS_ENABLED = 'CALC'\n")
-                else:
-                    output.write("\nREPORTS_ENABLED = None\n")
-            else:
-                # Write this setting to the settings.
-                output.write("\nREPORTS_ENABLED = None\n")
-
-            return True
-
-        except Exception as ex:
-            # An error occurred during the processing of the settings file
-            logging.warning(traceback.format_exc())
-
-            return False
-
-    def _write_publicmapping_settings(self, output):
-        """
-        Write settings specific to the publicmapping django app to
-        a settings file.
-
-        @param output: A file like object.
-        @returns: A boolean flag indicating if writing settings succeeded.
-        """
-        try:
-            cfg = self.data.xpath('//Internationalization')[0]
-            output.write("TIME_ZONE = '%s'\n" % cfg.get('timezone'))
-            output.write("LANGUAGES = (\n")
-            for language in cfg.xpath('Language'):
-                output.write("    ('%s', '%s'),\n" % (language.get('code'),
-                                                      language.get('label')))
-            output.write(")\n")
-            output.write(
-                "# Modify to change the language of the application\n")
-            if not cfg.get('default') is None:
-                output.write("LANGUAGE_CODE = '%s'\n\n" % cfg.get('default'))
-            else:
-                output.write("LANGUAGE_CODE = '%s'\n\n" % cfg[0].get('code'))
-
-            cfg = self.data.xpath('//Project/Database')[0]
-            output.write('\n#\n# Automatically generated settings.\n#\n')
-
-            output.write("DATABASES = {\n")
-            output.write("    'default': {\n")
-            output.write(
-                "        'ENGINE': 'django.contrib.gis.db.backends.postgis',\n"
-            )
-            output.write("        'NAME': '%s',\n" % cfg.get('name'))
-            output.write("        'USER': '%s',\n" % cfg.get('user'))
-            output.write("        'PASSWORD': '%s',\n" % cfg.get('password'))
-            output.write("        'HOST': '%s',\n" % cfg.get('host'))
-            output.write("    }\n")
-            output.write("}\n")
-
-            cfg = self.data.xpath('//MapServer')[0]
-            output.write("\nMAP_SERVER = '%s'\n" % cfg.get('hostname'))
-            protocol = cfg.get('protocol')
-            if protocol:
-                output.write("MAP_SERVER_PROTOCOL = '%s'\n" % protocol)
-            output.write("BASE_MAPS = '%s'\n" % cfg.get('basemaps'))
-            output.write("MAP_SERVER_NS = '%s'\n" % cfg.get('ns'))
-            output.write("MAP_SERVER_NSHREF = '%s'\n" % cfg.get('nshref'))
-            output.write("FEATURE_LIMIT = %d\n" % int(cfg.get('maxfeatures')))
-            output.write("MAP_SERVER_USER = '%s'\n" % cfg.get('adminuser'))
-            output.write("MAP_SERVER_PASS = '%s'\n" % cfg.get('adminpass'))
-
-            cfg = self.data.xpath('//Project/KeyValueStore')
-            if len(cfg) > 0:
-                output.write("\nKEY_VALUE_STORE = {\n")
-                output.write(
-                    "    'PASSWORD': '%s',\n" % cfg[0].get('password'))
-                output.write("    'HOST': '%s',\n" % cfg[0].get('host'))
-                output.write("    'PORT': '%s',\n" % cfg[0].get('port'))
-                output.write("    'DB': '%s',\n" % cfg[0].get('db'))
-                output.write("}\n")
-            else:
-                output.write("\nKEY_VALUE_STORE = ''\n")
-
-            cfg = self.data.xpath('//Adjacencies/*')
-            if len(cfg) > 0:
-                output.write("\nADJACENCY = True\n")
-            else:
-                output.write("\nADJACENCY = False\n")
-
-            # Specific Settings for Convex Hull Choropleth - This choropleth
-            # can only be displayed if convex hull is added to a list of score
-            # functions
-            cfg = self.data.xpath(
-                '//Scoring/ScoreFunctions/ScoreFunction[@id="district_convex"]'
-            )
-            if len(cfg) > 0:
-                output.write("\nCONVEX_CHOROPLETH = True\n")
-            else:
-                output.write("\nCONVEX_CHOROPLETH = False\n")
-
-            cfg = self.data.xpath('//Mailer')[0]
-            output.write("\nEMAIL_HOST = '%s'\n" % cfg.get('server'))
-            output.write("EMAIL_PORT = %d\n" % int(cfg.get('port')))
-            output.write("EMAIL_HOST_USER = '%s'\n" % cfg.get('username'))
-            output.write("EMAIL_HOST_PASSWORD = '%s'\n" % cfg.get('password'))
-            output.write("EMAIL_SUBJECT_PREFIX = '%s '\n" % cfg.get('prefix'))
-            use_tls = cfg.get('use_tls')
-            if use_tls:
-                output.write("EMAIL_USE_TLS = %s\n" % ((use_tls == 'true'), ))
-            submission_email = cfg.get('submission_email')
-            if submission_email:
-                output.write("EMAIL_SUBMISSION = '%s'\n" % submission_email)
-
-            cfg = self.data.xpath('//Project')[0]
-            root_dir = cfg.get('root')
-
-            output.write(
-                "\nTEMPLATE_DIRS = (\n  '%s/django/publicmapping/templates',\n)\n"
-                % root_dir)
-            output.write("\nSLD_ROOT = '%s/sld/'\n" % root_dir)
-
-            output.write(
-                "\nSTATICFILES_DIRS = (\n  '%s/django/publicmapping/static/',\n)\n"
-                % root_dir)
-
-            quota = cfg.get('sessionquota')
-            if not quota:
-                quota = 5
-            output.write("\nCONCURRENT_SESSIONS = %d\n" % int(quota))
-
-            timeout = cfg.get('sessiontimeout')
-            if not timeout:
-                timeout = 15
-            output.write("\nSESSION_TIMEOUT = %d\n" % int(timeout))
-
-            # If banner image setting does not exist, defaults to:
-            # '/static/images/banner-home.png'
-            banner = cfg.get('bannerimage')
-            if banner:
-                output.write("\nBANNER_IMAGE = '%s'\n" % banner)
-
-            # Reporting is optional
-            cfg = self.data.xpath('//Reporting')
-            if cfg is not None:
-                bardcfg = cfg[0].find('BardConfigs/BardConfig')
-                calccfg = cfg[0].find('CalculatorReports')
-                # BARD
-                if bardcfg is not None:
-                    cfg = bardcfg
-
-                    output.write(
-                        "BARD_TRANSFORM = '%s'\n" % cfg.get('transform'))
-                    server = cfg.get('server')
-                    if server:
-                        output.write("BARD_SERVER = '%s'\n" % server)
-                    else:
-                        output.write(
-                            "BARD_SERVER = 'http://localhost/reporting'\n")
-
-            cfg = self.data.xpath('//GoogleAnalytics')
-            if len(cfg) > 0:
-                cfg = cfg[0]
-                output.write("\nGA_ACCOUNT = '%s'\n" % cfg.get('account'))
-                output.write("GA_DOMAIN = '%s'\n" % cfg.get('domain'))
-            else:
-                output.write("\nGA_ACCOUNT = None\nGA_DOMAIN = None\n")
-
-            cfg = self.data.xpath('//Upload')
-            if len(cfg) > 0:
-                cfg = cfg[0]
-                output.write(
-                    "\nMAX_UPLOAD_SIZE = %s * 1024\n" % cfg.get('maxsize'))
-            else:
-                output.write("\nMAX_UPLOAD_SIZE = 5000 * 1024\n")
-
-            # Fix unassigned parameters
-            minpercent = 99
-            comparatorsubject = 'poptot'
-            cfg = self.data.xpath('//FixUnassigned')
-            if len(cfg) > 0:
-                cfg = cfg[0]
-                minpercent = cfg.get('minpercent') or minpercent
-                comparatorsubject = cfg.get(
-                    'comparatorsubject') or comparatorsubject
-            output.write(
-                "\nFIX_UNASSIGNED_MIN_PERCENT = %d\n" % int(minpercent))
-            output.write("\nFIX_UNASSIGNED_COMPARATOR_SUBJECT = '%s'\n" %
-                         comparatorsubject)
-
-            # Undo restrictions
-            maxundosduringedit = 0
-            maxundosafteredit = 0
-            cfg = self.data.xpath('//MaxUndos')
-            if len(cfg) > 0:
-                cfg = cfg[0]
-                maxundosduringedit = cfg.get('duringedit') or 0
-                maxundosafteredit = cfg.get('afteredit') or 0
-            output.write(
-                "\nMAX_UNDOS_DURING_EDIT = %d\n" % int(maxundosduringedit))
-            output.write(
-                "\nMAX_UNDOS_AFTER_EDIT = %d\n" % int(maxundosafteredit))
-
-            # Leaderboard
-            maxranked = 10
-            cfg = self.data.xpath('//Leaderboard')
-            if len(cfg) > 0:
-                cfg = cfg[0]
-                maxranked = cfg.get('maxranked') or 10
-            output.write("\nLEADERBOARD_MAX_RANKED = %d\n" % int(maxranked))
-
-            return True
-
-        except Exception as ex:
-            # An error occurred during the processing of the settings file
-            logging.warning(traceback.format_exc())
-
-            return False
-
-    def _write_reporting_settings(self, output):
-        """
-        Write settings specific to the reporting django app to
-        a settings file.
-
-        @param output: A file like object.
-        @returns: A boolean flag indicating if writing settings succeeded.
-        """
-        try:
-            cfg = self.data.xpath('//Reporting')
-            if cfg is not None:
-                bardcfg = cfg[0].find('BardConfigs/BardConfig')
-                calccfg = cfg[0].find('CalculatorReports')
-                # BARD
-                if bardcfg is not None:
-                    cfg = bardcfg
-
-                    output.write("BARD_BASESHAPE = '%s'\n" % cfg.get('shape'))
-
-            return (
-                True,
-                [],
-            )
-        except Exception as ex:
-            # An error occurred during the processing of the settings file
-            logging.warning(traceback.format_exc())
-
-            return False
 
     def get_node(self, node, parent=None):
         """

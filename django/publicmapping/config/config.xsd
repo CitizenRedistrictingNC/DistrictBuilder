@@ -226,7 +226,7 @@
                             to be considered contiguous with. Tests for contiguity will apply these overrides
                             in order to account for contiguity when physical contiguity is not possible.
                             For example, an island may need to be marked contiguous with one or more geounits
-                            on an adjacent coast (possibly containing harbors). 
+                            on an adjacent coast (possibly containing harbors).
                         </xs:documentation>
                     </xs:annotation>
                     <xs:complexType>
@@ -254,7 +254,7 @@
                             and 'num_members' (number of representatives)
                             For example: "{name} - [{num_members}]" will display "District 5 - [3]" for a
                             district named "District 5" that is configured with 3 representatives.
-                            
+
                             The other min/max attributes are for configuring valid ranges for (respectively):
                             number of multi-member districts allowed
                             number of members allowed per multi-member district
@@ -381,7 +381,7 @@
                                     <xs:attribute name="password" type="xs:string" use="required" />
                                 </xs:complexType>
                             </xs:element>
-                            <xs:element name="KeyValueStore" minOccurs="0">
+                            <xs:element name="KeyValueStore">
                                 <xs:complexType>
                                     <xs:attribute name="host" type="xs:string" use="optional" />
                                     <xs:attribute name="port" type="xs:string" use="required" />
@@ -474,8 +474,6 @@
                                 </xs:complexType>
                             </xs:element>
                         </xs:sequence>
-                        <xs:attribute name="root" type="xs:string" use="required" />
-                        <xs:attribute name="temp" type="xs:string" use="optional" />
                         <xs:attribute name="sessionquota" type="xs:positiveInteger" use="optional" />
                         <xs:attribute name="sessiontimeout" type="xs:positiveInteger" use="optional" />
                     </xs:complexType>
