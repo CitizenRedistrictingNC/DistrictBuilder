@@ -1,0 +1,255 @@
+<!-- The application element that contains all other elements. -->
+<DistrictBuilder>
+
+   <!-- Define legislative bodies referenced in the system. -->
+   <LegislativeBodies>
+      <LegislativeBody id="congress" name="Congressional" short_label="%(district_id)s"
+         long_label="District %(district_id)s" maxdistricts="11" sort_key="1" members="Districts"/>
+   </LegislativeBodies>
+
+   <!-- Define Regions as aggregations of smaller geographic units. -->
+   <Regions>
+         <Region id="nc" name="nc" label="North Carolina" description="The Commonwealth of North Carolina" sort_key="0">
+            <!-- A set of legislative bodies that exist in this region. -->
+            <LegislativeBodies>
+               <LegislativeBody ref="congress" />
+            </LegislativeBodies>
+            <!-- Only these geolevels are applicable to this region -->
+            <GeoLevels>
+               <GeoLevel ref="block">
+                  <!-- <GeoLevel ref="vtd"> -->
+                  <!--       <GeoLevel ref="county" /> -->
+                  <!-- </GeoLevel> -->
+               </GeoLevel>
+            </GeoLevels>
+         </Region>
+   </Regions>
+
+    <!-- A list of subjects referenced in the system. -->
+    <Subjects>
+        <!-- A Subject is a measurement type, such as "Total Population". 
+            The subject is mapped to an attribute during the import phase,
+            and contains a long and short display name. Subjects have IDs
+            for referencing in GeoLevel definitions later. -->
+        <!-- You can alias a subject by overriding the field, if the
+            import shapefiles have different field names at different
+            geographic levels. -->
+        <!-- <Subject id="pophisp1" field="POPHISP" aliasfor="pophisp"/> -->
+    </Subjects>
+
+    <Scoring>
+        <ScoreFunctions>
+            <ScoreFunction id="b_plan_congress_noncontiguous" type="plan"
+                calculator="redistricting.calculators.Contiguity"
+                label="Contiguous">
+                <Argument name="target" value="13" />
+            </ScoreFunction>
+
+        </ScoreFunctions>
+        
+        <ScorePanels>
+            <!-- Summary above all sidebar panels -->
+            <ScorePanel id="congressional_panel_summary" type="plan_summary" position="1"
+                title="Plan Summary" cssclass="plan_summary congressional" template="plan_summary.html">
+                <Score ref="b_plan_congress_noncontiguous"/>
+            </ScorePanel>
+
+        </ScorePanels>
+        
+        <ScoreDisplays>
+            <ScoreDisplay id="congress_sidebar_basic" legislativebodyref="congress" type="sidebar" title="Basic Information" cssclass="basic_information">
+                <ScorePanel ref="congressional_panel_summary" />
+            </ScoreDisplay>
+        </ScoreDisplays>
+    </Scoring>
+    
+    <Validation>
+    </Validation>
+    
+    <!--
+    <Adjacencies>
+
+      In order to load 'Adjacency' into the database for use of the adjacency
+      data must be in a tab-delimited text file where:
+      
+      column 1 = geounit1_id
+      column 2 = geounit2_id
+      column 3 = cost/distance/travel time, etc.
+      
+      The geounit_id's *must* be the same IDs that make up the portable_ids in
+      the geounit table.
+      
+      This text file must not have have a header row.
+      
+      Please note, at this time the data import and adjacency calculator do not support
+      data where the cost between A->B != B->A.
+      
+      <Adjacency path="/projects/PublicMapping/DistrictBuilder/processed_15tiemposecciones.txt" regionref="mx"/>
+    </Adjacencies>
+    -->
+    
+    <GeoLevels>
+      <GeoLevel id="block" name="block" label="block" min_zoom="8" sort_key="3" tolerance="2.5">
+          <!--
+
+          You may use EITHER the "Shapefile" or "Files" element as a child
+          of geolevel to define the geography and attributes. The
+          "Shapefile" element must contain both the geography and
+          attributes, whereas the "Files" element contains an item for the
+          geography, and multiple items for the attributes.
+
+          This is in anticipation of loading data that has been downloaded
+          directly from the American Fact Finder web application hosted by
+          the US Census Beureau.
+
+          -->
+
+          <Shapefile path="/data/al.shp/Block.shp">
+              <Fields>
+                  <Field name="Block" type="name"/>
+                  <Field name="Block" type="portable"/>
+              </Fields>
+          </Shapefile>
+
+          <!--
+
+          A reference to a legislative body. A geolevel may be used by
+          many legislative bodies.
+
+          -->
+      </GeoLevel>
+    </GeoLevels>
+   
+    <!-- 
+    
+    This element facilitates the creation of system templates. A
+    system template is a plan owned by the admin user, that all other
+    users can create derivative plans from.
+    
+    -->
+    <Templates>
+    </Templates>
+    
+    <!-- 
+    
+    Configuration settings for the components of the application. The
+    "root" attribute defines the location in the file system, under
+    which the rest of the application components can be found.
+    
+    -->
+    <Project root="/projects/PublicMapping/DistrictBuilder" sessionquota="5" 
+             sessiontimeout="15" temp="/projects/PublicMapping/local/reports">
+        <!-- 
+            Database connection information.
+
+            If you change the user to something different than 
+            'publicmapping', you will have to define a schema in
+            postgresql by the same name as the user.
+
+            The 'host' attribute is optional.
+        -->
+        <Database name="district_builder"
+                  user="district_builder"
+                  password="district_builder"
+                  host="postgres.internal.districtbuilder.com"/>
+
+        <!--
+           Key Value Store is required for the adjacency feature. 
+
+           This should be the location of your redis database.
+           All parameters are required.
+
+        <KeyValueStore host="localhost" port="6379" password="" db="0"/>
+        -->        
+
+        <!--
+           Internationalization and localization information.
+
+           At lease one language is required. After running setup, the default
+           LANGUAGE_CODE for the app will be set to the first language defined.
+           Running setup with the '-l' option will create a message file and
+           compile it for each Language defined.
+        -->
+        <Internationalization timezone="US/Eastern" default="en">
+            <Language code="en" label="English" />
+            <Language code="fr" label="French" />
+            <Language code="es" label="Spanish" />
+        </Internationalization>
+        
+        <!-- 
+        
+        Administrative user information. This will create an administrative
+        superuser in django with these credentials.
+        
+        -->
+        <Admin user="ADMIN-USER-NAME" email="ADMIN-EMAIL" password="STRONG-PASSWORD"/>
+        
+        <!-- Configuration items specific to the redistricting app. -->
+        <Redistricting>           
+            <!-- 
+            
+            Information about the mapserver and geoserver settings. 
+
+            The "basemaps" attribute is optional, and can be any set to 
+            any combination (CSV) of the following:
+              osm-road
+              arc-road
+              google-road
+              google-aerial
+              google-hybrid
+              bing-road
+              bing-aerial
+              bing-hybrid
+             
+            The options are displayed in the order in which they are set,
+            with the first one being set to the default base layer. If 
+            this is not set, it will default to osm-road. If the desire 
+            is to have no base layer, set it to the empty string.
+            
+            -->
+            <MapServer hostname="" ns="pmp" nshref="https://github.com/PublicMapping/"
+                adminuser="admin" adminpass="geoserver" maxfeatures="100" 
+                styles="/opt/sld/" />
+
+            <!-- 
+            
+            Use a GoogleAnalytics account to tract the usage of the 
+            application. This requires an account and domain.
+
+            <GoogleAnalytics account="" domain=""/>
+            
+            -->
+
+            <!-- Upload file size restrictions. This is in KB -->
+            <Upload maxsize="5300"/>
+
+            <!--
+            Fix unassigned behavior
+            minpercent - The minimum percentage of assigned units required
+                in order to perform fixes for adjacent unassigned units.
+                This does not apply to unassigned units wholly contained within
+                a district - those don't require a minimum.
+            comparatorsubject - Name of the subject used for deciding which district
+                to assign an adjacent unassigned geounit to in the case of multiple
+                adjacent districts. The district with the lower value for this subject
+                is always favored.
+            -->
+            <FixUnassigned minpercent="99" comparatorsubject="poptot" />
+        </Redistricting>
+        
+        <!-- 
+        Configure the engine used for reporting. Can be either Calculator Reports or BARD
+        -->
+        <Reporting>
+            <!--
+               Use calculators for reporting. tempdir is the location where
+               the reports are stored and served from.
+            -->
+            <CalculatorReports tempdir="/projects/PublicMapping/local/reports" />          
+        </Reporting>
+        
+        <!-- Information about the mailer configuration. -->
+        <Mailer server="localhost" port="25" username="" password=""/>
+    </Project>
+    
+</DistrictBuilder>
