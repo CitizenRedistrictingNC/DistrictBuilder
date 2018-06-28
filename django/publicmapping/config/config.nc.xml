@@ -17,9 +17,9 @@
             <!-- Only these geolevels are applicable to this region -->
             <GeoLevels>
                <!-- <GeoLevel ref="block"> -->
-                  <!-- <GeoLevel ref="vtd"> -->
+                  <GeoLevel ref="vtd">
                         <GeoLevel ref="county" />
-                  <!-- </GeoLevel> -->
+                  </GeoLevel>
                <!-- </GeoLevel> -->
             </GeoLevels>
          </Region>
@@ -46,7 +46,6 @@
                 label="Contiguous">
                 <Argument name="target" value="13" />
             </ScoreFunction>
-
         </ScoreFunctions>
 
         <ScorePanels>
@@ -55,7 +54,6 @@
                 title="Plan Summary" cssclass="plan_summary congressional" template="plan_summary.html">
                 <Score ref="b_plan_congress_noncontiguous"/>
             </ScorePanel>
-
         </ScorePanels>
 
         <ScoreDisplays>
@@ -147,6 +145,59 @@
               </Geography>
           </Files>
       </GeoLevel>
+
+      <GeoLevel id="vtd" name="vtd" label="vtd" min_zoom="4" sort_key="2" tolerance="25">
+          <!--
+
+          You may use EITHER the "Shapefile" or "Files" element as a child
+          of geolevel to define the geography and attributes. The
+          "Shapefile" element must contain both the geography and
+          attributes, whereas the "Files" element contains an item for the
+          geography, and multiple items for the attributes.
+
+          This is in anticipation of loading data that has been downloaded
+          directly from the American Fact Finder web application hosted by
+          the US Census Beureau.
+
+          -->
+          <Files>
+              <Geography path="/data/VotingDistrict.shp">
+                  <!--
+
+                  Each Field item defines a field in the shapefile that
+                  describes a different part of the geographic unit.
+
+                  A "name" type field is used to display the name of the
+                  geographic unit.
+
+                  A "portable" type field is used to store the FIPS/GEOID
+                  of the geographic unit, which is shared with other GIS
+                  systems.
+
+                  A "tree" type field is used to store information about
+                  the geography, and where it resides in the tree. This type
+                  of field requires a "pos" attribute, which declares which
+                  position in the tree the field belongs (starting at 0);
+                  a "width" attribute is also required to declare how wide
+                  this portion of the tree code is. This is helpful when
+                  the treecode may not be zero padded.
+
+                  -->
+                  <Fields>
+                      <!-- Name of VTD -->
+                      <Field name="VTD_Name" type="name"/>
+                      <!-- unique identifier -->
+                      <Field name="VTD_Key" type="portable"/>
+                      <!-- state code -->
+                      <Field name="state_code" type="tree" pos="0" width="2"/>
+                      <!-- county code -->
+                      <Field name="Cnty_Code" type="tree" pos="1" width="3"/>
+                      <!-- vtd code -->
+                      <Field name="VTD" type="tree" pos="2" width="4"/>
+                  </Fields>
+              </Geography>
+          </Files>
+      </GeoLevel>
     </GeoLevels>
 
     <!--
@@ -179,7 +230,7 @@
         -->
         <Database name="district_builder"
                   user="district_builder"
-                  password="district_builder"
+                  password="dbpassword"
                   host="postgres.internal.districtbuilder.com"/>
 
         <!--
