@@ -20,12 +20,12 @@ function fetch_dev_data() {
     docker-compose \
         exec -T django mkdir -p /data
 
-    # echo "Downloading shapefile"
-    # docker-compose \
-    #     exec -T django \
-    #     wget -q \
-    #         -O /data/districtbuilder_data.zip \
-    #         https://s3.amazonaws.com/districtbuilderdata/VA_data.zip
+    echo "Downloading shapefile"
+    docker-compose \
+        exec -T django \
+        wget -q \
+            -O /data/districtbuilder_data.zip \
+            s3://redistricting.a.willowdesk.info/districtbuilder_data.zip
 }
 
 function recreate_database() {
