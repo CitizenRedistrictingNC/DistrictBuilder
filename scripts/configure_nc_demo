@@ -25,7 +25,7 @@ function fetch_dev_data() {
         exec -T django \
         wget -q \
             -O /data/districtbuilder_data.zip \
-            s3://redistricting.a.willowdesk.info/districtbuilder_data.zip
+            http://redistricting.a.willowdesk.info.s3.amazonaws.com/districtbuilder_data.zip
 }
 
 function recreate_database() {
