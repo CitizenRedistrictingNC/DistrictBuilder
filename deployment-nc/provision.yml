@@ -1,0 +1,93 @@
+---
+- name: Setup AWS infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - vars/aws.yml
+    - vars/aws_secrets.yml
+  tasks:
+    - name: generate cloudformation template.
+      shell: python scripts/make_cf_template.py > files/cf_template.json
+    - name: Launch cloudformation to create ec2, security group, and EIP.
+      cloudformation:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        stack_name: "{{ stack_name }}"
+        state: present
+        region: "{{ aws_region }}"
+        template: files/cf_template.json
+        template_parameters:
+          KeyName: "{{ key_name }}"
+          Name: "{{ stack_name }}"
+          SSHLocation: "0.0.0.0/0"
+      register: cloudformation
+    - name: Add instance to in-memory host group
+      add_host:
+        hostname: "{{ cloudformation.stack_outputs.InstanceIPAddress }}"
+        groups: cloud_formation
+    - name: Wait for SSH
+      wait_for:
+        host: "{{ cloudformation.stack_outputs.InstanceIPAddress }}"
+        port: 22
+        delay: 5
+        timeout: 300
+        state: started
+- name: Setup ansible dependencies
+  hosts: cloud_formation
+  become: yes
+  gather_facts: False
+  vars_files:
+    - vars/aws.yml
+    - vars/aws_secrets.yml
+  pre_tasks:
+  # If there is no python, install it before using other ansible packages
+  - name: setup python symlink for ansible
+    raw: which python || ln -s `which python3` /usr/bin/python
+- name: Configure ec2 instance
+  hosts: cloud_formation
+  become: yes
+  gather_facts: True
+  vars_files:
+    - vars/aws.yml
+    - vars/aws_secrets.yml
+  roles:
+  - role: swapfile
+    swapfile_size: 3GB
+    swapfile_swappiness: 10
+  tasks:
+  - name: Add docker key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+  - name: Add docker repository
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable
+  - name: Update safe packages
+    apt:
+      upgrade: safe
+  - name: Install standard packages
+    apt:
+      name: ["docker-ce", "python-pip"]
+      update_cache: yes
+  - name: docker-compose exists?
+    stat:
+      path: /usr/local/bin/docker-compose
+    register: docker_compose_exists
+  - name: Install docker-compose
+    get_url:
+      url: https://github.com/docker/compose/releases/download/1.21.2/docker-compose-Linux-x86_64
+      dest: /usr/local/bin/docker-compose
+      mode: 0755
+    when: docker_compose_exists.stat.exists == False
+  - name: Create deployment account
+    user:
+      name: deploy
+      groups: ["docker"]
+      comment: Deployment Account
+  - name: Create user-data directory
+    file:
+      path: /opt/district-builder/user-data
+      owner: deploy
+      group: deploy
+      mode: 0700
+      state: directory

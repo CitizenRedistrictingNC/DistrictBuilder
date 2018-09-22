@@ -1,0 +1,21 @@
+---
+- name: "setup backups for {{ container_name }}"
+  docker_container:
+    name: "{{ container_name }}_dockup"
+    state: started
+    restart_policy: always
+    image: wetransform/dockup:latest
+    pull: yes
+    volumes_from: "{{ container_name }}"
+    env:
+      # TODO GPG encryption is supported - that should happen at some point.
+      AWS_ACCESS_KEY_ID     : "{{ ec2_access_key }}"
+      AWS_SECRET_ACCESS_KEY : "{{ ec2_secret_key }}"
+      AWS_DEFAULT_REGION    : us-east-1
+      BACKUP_NAME           : "{{ container_name }}"
+      PATHS_TO_BACKUP       : "{{ paths|default('auto') }}"
+      S3_BUCKET_NAME        : ranch.a.willowdesk.info.backups
+      S3_FOLDER             : "{{ container_name }}/"
+      RESTORE               : false
+      # Backup every Sunday
+      CRON_TIME             : 0 0 * * 0

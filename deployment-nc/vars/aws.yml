@@ -1,0 +1,6 @@
+---
+aws_region: us-east-1
+# name of your AWS cloudformation resources:
+stack_name: districtbuilder
+# name of your EC2 Key Pair:
+key_name: districtbuilder

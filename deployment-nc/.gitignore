@@ -1,0 +1,4 @@
+.vault_pass.txt
+*.retry
+files/cf_template.json
+deployment/roles

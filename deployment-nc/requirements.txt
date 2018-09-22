@@ -1,0 +1,4 @@
+ansible==2.6.2
+boto==2.49.0
+boto3==1.7.75
+troposphere==2.3.1

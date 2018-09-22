@@ -1,0 +1,32 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - vars/aws.yml
+    - vars/aws_secrets.yml
+  tasks:
+    - name: get admin's public ip address
+      ipify_facts:
+    - name: generate cloudformation template.
+      shell: python scripts/make_cf_template.py > files/cf_template.json
+    - name: Ensure cloudformation is up
+      cloudformation:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        stack_name: "{{ stack_name }}"
+        state: present
+        region: "{{ aws_region }}"
+        template: files/cf_template.json
+        template_parameters:
+          KeyName: "{{ key_name }}"
+          Name: "{{ stack_name }}"
+          SSHLocation: "{{ ipify_public_ip }}/32"
+      register: cloudformation
+    - name: Destroy cloudformation to create ec2, security group, and EIP.
+      cloudformation:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        stack_name: "{{ stack_name }}"
+        state: absent
+        region: "{{ aws_region }}"
