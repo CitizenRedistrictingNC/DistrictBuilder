@@ -17,6 +17,8 @@ services:
   nginx:
     volumes:
       - ./django/publicmapping/static/:/opt/static/
+    environment:
+        VIRTUAL_HOST: districtbuilder.a.willowdesk.info
 
   django:
     volumes:
@@ -25,8 +27,7 @@ services:
     links:
       - postgres:${DATABASE_HOST}
     environment:
-        VIRTUAL_HOST: districtbuilder.a.willowdesk.info
-        ALLOWED_HOST: districtbuilder.a.willowdesk.info
+        ALLOWED_HOST: web
 
   celery:
     volumes:

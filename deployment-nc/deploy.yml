@@ -66,6 +66,8 @@
     command: docker-compose up -d
     args:
       chdir: /home/deploy/districtbuilder
+      env:
+        WEB_APP_PORT: 8080
   - name: Ensure python docker package installed
     pip: name=docker
   - name: Ensure public facing nginx is up

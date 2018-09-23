@@ -2,7 +2,7 @@
 COMPOSE_PROJECT_NAME=districtbuilder
 
 # districtbuilder settings
-WEB_APP_PORT=8080
+WEB_APP_PORT=8181
 WEB_APP_PASSWORD=98aoeVteAK
 ADMIN_USER=admin
 ADMIN_EMAIL=dsummersl@gmail.com
