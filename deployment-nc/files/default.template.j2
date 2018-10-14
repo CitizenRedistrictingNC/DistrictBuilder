@@ -1,0 +1,36 @@
+upstream {{ districtbuilder_host }} {
+  server django:${WEB_APP_PORT};
+}
+
+upstream geoserver {
+  server geoserver:${WEB_APP_PORT};
+}
+
+server {
+  listen ${WEB_APP_PORT};
+  server_name localhost;
+
+  # Long timeouts are necessary for extended split reports
+  proxy_read_timeout 300s;
+
+  location / {
+    proxy_pass http://{{ districtbuilder_host }};
+    client_max_body_size 20M;
+  }
+
+  location /geoserver/ {
+    proxy_pass http://geoserver/geoserver/;
+  }
+
+  location /sld/ {
+    alias /opt/sld/;
+  }
+
+  location /static/ {
+    alias /opt/static/;
+  }
+
+  location /reports/ {
+    alias /opt/reports/;
+  }
+}

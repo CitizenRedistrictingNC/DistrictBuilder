@@ -1,5 +1,13 @@
 version: "3.3"
 services:
+  nginx_proxy:
+    image: jwilder/nginx-proxy
+    ports: ["80:80", "443:443"]
+    volumes:
+    - /var/run/docker.sock:/tmp/docker.sock:ro
+    links:
+    - nginx
+
   postgres:
     image: quay.io/azavea/postgis:2.2-postgres9.5-slim
     env_file:
@@ -18,7 +26,8 @@ services:
     volumes:
       - ./django/publicmapping/static/:/opt/static/
     environment:
-        VIRTUAL_HOST: districtbuilder.a.willowdesk.info
+      VIRTUAL_HOST: {{ districtbuilder_host }}
+      VIRTUAL_PORT: 8080
 
   django:
     volumes:
@@ -27,7 +36,7 @@ services:
     links:
       - postgres:${DATABASE_HOST}
     environment:
-        ALLOWED_HOST: web
+      ALLOWED_HOST: {{ districtbuilder_host }}
 
   celery:
     volumes:

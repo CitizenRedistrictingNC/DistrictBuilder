@@ -6,78 +6,79 @@
   vars_files:
     - vars/deploy.yml
   tasks:
-  - name: Create .ssh directory
-    file:
-      path: /home/deploy/.ssh
-      owner: deploy
-      group: deploy
-      mode: 0700
-      state: directory
-  - name: Download NC data
-    get_url:
-      url: http://redistricting.a.willowdesk.info.s3.amazonaws.com/districtbuilder_data.zip
-      dest: /opt/district-builder/user-data/districtbuilder_data.zip
-      checksum: sha256:a9aee6b76dc467616bad87c63ac1616c72fc1edbe185cb4b72814ab80e592355
-  - name: Make sure config_settings.py is present
-    file:
-      path: /opt/district-builder/user-data/config_settings.py
-      owner: deploy
-      group: deploy
-      mode: 0700
-      state: touch
-  - name: Install deploy key
-    copy:
-      src: files/deploy_key
-      dest: /home/deploy/.ssh/deploy_key
-      owner: deploy
-      group: deploy
-      mode: 0600
-  - name: Checkout districtbuilder
-    git:
-      dest: /home/deploy/districtbuilder
-      key_file: /home/deploy/.ssh/deploy_key
-      repo: git@github.com:CitizenRedistrictingNC/DistrictBuilder.git
-      accept_hostkey: yes
-      force: yes
-      version: "{{ revision }}"
-  - name: Install NC config.xml
-    command: cp /home/deploy/districtbuilder/django/publicmapping/config/config.nc.xml /opt/district-builder/user-data/config.xml
-  - name: Install .env
-    copy:
-      src: files/dot_env
-      dest: /home/deploy/districtbuilder/.env
-      owner: deploy
-      group: deploy
-      mode: 0600
-  - name: Copy config.xml into place
-    copy:
-      remote_src: yes
-      src: /home/deploy/districtbuilder/django/publicmapping/config/config.nc.xml
-      dest: /home/deploy/districtbuilder/django/publicmapping/config/config.xml
-  - name: Run districtbuilder update script
-    command: ./scripts/update
-    args:
-      chdir: /home/deploy/districtbuilder
-  - name: install docker-compose.override.yml
-    copy:
-      src: files/docker-compose.override.yml
-      dest: /home/deploy/districtbuilder/docker-compose.override.yml
-  - name: Ensure all containers are up.
-    command: docker-compose up -d
-    args:
-      chdir: /home/deploy/districtbuilder
-      env:
-        WEB_APP_PORT: 8080
-  - name: Ensure python docker package installed
-    pip: name=docker
-  - name: Ensure public facing nginx is up
-    docker_container:
-      name: nginx-proxy
-      state: started
-      restart_policy: always
-      image: jwilder/nginx-proxy
-      ports: ["80:80", "443:443"]
-      volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      networks:
-        - name: districtbuilder_default
+  - name: Configure deploy key
+    block:
+    - name: Create .ssh directory
+      file:
+        path: /home/deploy/.ssh
+        owner: deploy
+        group: deploy
+        mode: 0700
+        state: directory
+    - name: Install deploy key
+      copy:
+        src: files/deploy_key
+        dest: /home/deploy/.ssh/deploy_key
+        owner: deploy
+        group: deploy
+        mode: 0600
+  - name: Setup districtbuilder directory
+    block:
+    - name: Download NC data
+      get_url:
+        url: "http://{{ districtbuilder_host }}.s3.amazonaws.com/districtbuilder_data.zip"
+        dest: /opt/district-builder/user-data/districtbuilder_data.zip
+        checksum: sha256:a9aee6b76dc467616bad87c63ac1616c72fc1edbe185cb4b72814ab80e592355
+    - name: Make sure config_settings.py is present
+      file:
+        path: /opt/district-builder/user-data/config_settings.py
+        owner: deploy
+        group: deploy
+        mode: 0700
+        state: touch
+    - name: Checkout districtbuilder
+      git:
+        dest: /home/deploy/districtbuilder
+        key_file: /home/deploy/.ssh/deploy_key
+        repo: git@github.com:CitizenRedistrictingNC/DistrictBuilder.git
+        accept_hostkey: yes
+        force: yes
+        version: "{{ revision }}"
+    - name: Install NC config.xml
+      command: cp /home/deploy/districtbuilder/django/publicmapping/config/config.nc.xml /opt/district-builder/user-data/config.xml
+    - name: Install .env
+      copy:
+        src: files/dot_env
+        dest: /home/deploy/districtbuilder/.env
+        owner: deploy
+        group: deploy
+        mode: 0600
+    - name: Copy config.xml into place
+      copy:
+        remote_src: yes
+        src: /home/deploy/districtbuilder/django/publicmapping/config/config.nc.xml
+        dest: /home/deploy/districtbuilder/django/publicmapping/config/config.xml
+    - name: install docker-compose.override.yml
+      template:
+        src: files/docker-compose.override.yml.j2
+        dest: /home/deploy/districtbuilder/docker-compose.override.yml
+        owner: deploy
+        group: deploy
+        mode: 0600
+    - name: Install nginx default.template
+      template:
+        src: files/default.template.j2
+        dest: /home/deploy/districtbuilder/nginx/default.template
+        owner: deploy
+        group: deploy
+        mode: 0600
+  - name: Make sure districtbuilder is running
+    block:
+    - name: Run districtbuilder update script
+      command: ./scripts/update
+      args:
+        chdir: /home/deploy/districtbuilder
+    - name: Ensure all containers are up.
+      command: docker-compose up -d
+      args:
+        chdir: /home/deploy/districtbuilder
