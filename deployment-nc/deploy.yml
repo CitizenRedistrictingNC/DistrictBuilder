@@ -74,10 +74,19 @@
         mode: 0600
   - name: Make sure districtbuilder is running
     block:
+    - name: Stop all containers
+      command: docker-compose stop
+      args:
+        chdir: /home/deploy/districtbuilder
     - name: Run districtbuilder update script
       command: ./scripts/update
       args:
         chdir: /home/deploy/districtbuilder
+    - name: Configure the NC demo
+      command: ./scripts/configure_nc_demo
+      args:
+        chdir: /home/deploy/districtbuilder
+      when: force_rebuild
     - name: Ensure all containers are up.
       command: docker-compose up -d
       args:

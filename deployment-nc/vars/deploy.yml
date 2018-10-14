@@ -1,3 +1,9 @@
 ---
+# Branch to deploy:
 revision: provision-on-aws
+
+# URL where districtbuilder is configured
 districtbuilder_host: districtbuilder.a.willowdesk.info
+
+# When true, throw away the databases and rebuild with the NC demo data.
+force_rebuild: false

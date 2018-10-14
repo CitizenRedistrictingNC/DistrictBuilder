@@ -7,7 +7,7 @@ upstream geoserver {
 }
 
 server {
-  listen ${WEB_APP_PORT};
+  listen 80;
   server_name localhost;
 
   # Long timeouts are necessary for extended split reports

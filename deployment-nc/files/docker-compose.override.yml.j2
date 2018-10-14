@@ -27,7 +27,6 @@ services:
       - ./django/publicmapping/static/:/opt/static/
     environment:
       VIRTUAL_HOST: {{ districtbuilder_host }}
-      VIRTUAL_PORT: 8080
 
   django:
     volumes:
