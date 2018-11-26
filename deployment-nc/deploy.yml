@@ -72,6 +72,13 @@
         owner: deploy
         group: deploy
         mode: 0600
+    - name: Ensure certs directory exists
+      file:
+        path: /home/deploy/certs
+        owner: deploy
+        group: deploy
+        mode: 0700
+        state: directory
   - name: Make sure districtbuilder is running
     block:
     - name: Stop all containers

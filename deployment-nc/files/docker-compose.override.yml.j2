@@ -2,11 +2,30 @@ version: "3.3"
 services:
   nginx_proxy:
     image: jwilder/nginx-proxy
+    # TODO I dunno why I'd need to set this third docker-gen thing up - but it
+    # wants me to :(
+    # Take the letsencrypt helper out of docker-compose then, and just handle it
+    # all outside where volumes-from should still work?
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
     ports: ["80:80", "443:443"]
     volumes:
     - /var/run/docker.sock:/tmp/docker.sock:ro
+    - nginx-data:/etc/nginx/certs
+    - nginx-data:/etc/nginx/vhost.d
+    - nginx-data:/usr/share/nginx/html
     links:
     - nginx
+
+  nginx_proxy_letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - nginx-data:/etc/nginx/certs
+    - nginx-data:/etc/nginx/vhost.d
+    - nginx-data:/usr/share/nginx/html
+    environment:
+      NGINX_PROXY_CONTAINER: nginx_proxy
 
   postgres:
     image: quay.io/azavea/postgis:2.2-postgres9.5-slim
@@ -27,6 +46,8 @@ services:
       - ./django/publicmapping/static/:/opt/static/
     environment:
       VIRTUAL_HOST: {{ districtbuilder_host }}
+      LETSENCRYPT_HOST: {{ districtbuilder_host }}
+      LETSENCRYPT_EMAIL: {{ districtbuilder_admin_email }}
 
   django:
     volumes:
@@ -50,3 +71,7 @@ services:
   languages:
     volumes:
       - ./django/publicmapping/:/usr/src/app/
+
+
+volumes:
+  nginx-data:

@@ -50,7 +50,7 @@ then
     else
         configPath="config/${1:-config.nc.xml}"
         docker-compose up -d postgres django
-        fetch_dev_data
+        # fetch_dev_data
         recreate_database
         "${DIR}/load_configured_data" "${configPath}"
     fi
